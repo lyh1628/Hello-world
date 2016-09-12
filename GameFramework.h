@@ -6,6 +6,9 @@
 class CGameFramework
 {
 private:
+	CCamera *m_pCamera;
+
+private:
 	HINSTANCE m_hInstance;
 	HWND m_hWnd;
 
@@ -30,14 +33,15 @@ private:
 	//다음은 게임의 장면을 관리하는 객체에 대한 포인터를 나타낸다.
 	CScene *m_pScene;
 
-	CPlayer *m_pPlayer; 
+	CPlayer *m_pPlayer;
+	//int								m_nPlayers;
+	//CPlayer							**m_ppPlayers;
 
 	// 다음은 프레임 레이트를 주 윈도우의 캡션에 출력하기 위한 문자열이다.
 	_TCHAR m_pszBuffer[50];
 
-	CCamera* m_pCamera;
-private:
 	//깊이 버퍼(Depth Buffer) 객체 인터페이스와 뷰에 대한 포인터이다.
+private:
 	ID3D11Texture2D *m_pd3dDepthStencilBuffer;
 	ID3D11DepthStencilView *m_pd3dDepthStencilView;
 public:

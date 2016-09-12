@@ -1,4 +1,4 @@
-#include "stdafx.h"
+ï»¿#include "stdafx.h"
 #include "Object.h"
 #include "Shader.h"
 
@@ -6,18 +6,16 @@ CGameObject::CGameObject(int nMeshes)
 {
 	D3DXMatrixIdentity(&m_d3dxmtxWorld);
 
-	m_nReferences = 0;
-	m_bActive = true;
-
 	m_nMeshes = nMeshes;
-
 	m_ppMeshes = NULL;
-	if (m_nMeshes > 0)
-		m_ppMeshes = new CMesh*[m_nMeshes];
-	for (int i = 0; i < m_nMeshes; i++)
-		m_ppMeshes[i] = NULL;
+	if (m_nMeshes > 0) m_ppMeshes = new CMesh*[m_nMeshes];
+	for (int i = 0; i < m_nMeshes; i++)m_ppMeshes[i] = NULL;
 
 	m_bcMeshBoundingCube = AABB();
+
+	m_bActive = true;
+
+	m_nReferences = 0;
 }
 CGameObject::~CGameObject()
 {
@@ -25,8 +23,7 @@ CGameObject::~CGameObject()
 	{
 		for (int i = 0; i < m_nMeshes; i++)
 		{
-			if (m_ppMeshes[i])
-				m_ppMeshes[i]->Release();
+			if (m_ppMeshes[i]) m_ppMeshes[i]->Release();
 			m_ppMeshes[i] = NULL;
 		}
 		delete[] m_ppMeshes;
@@ -50,7 +47,39 @@ void CGameObject::SetPosition(D3DXVECTOR3 d3dxvPosition)
 	m_d3dxmtxWorld._42 = d3dxvPosition.y;
 	m_d3dxmtxWorld._43 = d3dxvPosition.z;
 }
-
+void CGameObject::GenerateRayForPicking(D3DXVECTOR3 *pd3dxvPickPosition, D3DXMATRIX *pd3dxmtxWorld, D3DXMATRIX *pd3dxmtxView, D3DXVECTOR3 *pd3dxvPickRayPosition, D3DXVECTOR3 *pd3dxvPickRayDirection)
+{
+	//pd3dxvPickPosition: ì¹´ë©”ë¼ ì¢Œí‘œê³„ì˜ ì (í™”ë©´ ì¢Œí‘œê³„ì—ì„œ ë§ˆìš°ìŠ¤ë¥¼ í´ë¦­í•œ ì ì„ ì—­ë³€í™˜í•œ ì )
+	//pd3dxmtxWorld: ì›”ë“œ ë³€í™˜ í–‰ë ¬, pd3dxmtxView: ì¹´ë©”ë¼ ë³€í™˜ í–‰ë ¬
+	//pd3dxvPickRayPosition: í”½í‚¹ ê´‘ì„ ì˜ ì‹œì‘ì , pd3dxvPickRayDirection: í”½í‚¹ ê´‘ì„  ë²¡í„°
+	/*ê°ì²´ì˜ ì›”ë“œ ë³€í™˜ í–‰ë ¬ì´ ì£¼ì–´ì§€ë©´ ê°ì²´ì˜ ì›”ë“œ ë³€í™˜ í–‰ë ¬ê³¼ ì¹´ë©”ë¼ ë³€í™˜ í–‰ë ¬ì„ ê³±í•˜ê³  ì—­í–‰ë ¬ì„ êµ¬í•œë‹¤. ì´ê²ƒì€ ì¹´ë©”ë¼ ë³€í™˜ í–‰ë ¬ì˜ ì—­í–‰ë ¬ê³¼ ê°ì²´ì˜ ì›”ë“œ ë³€í™˜ í–‰ë ¬ì˜ ì—­í–‰ë ¬ì˜ ê³±ê³¼ ê°™ë‹¤. ê°ì²´ì˜ ì›”ë“œ ë³€í™˜ í–‰ë ¬ì´ ì£¼ì–´ì§€ì§€ ì•Šìœ¼ë©´ ì¹´ë©”ë¼ ë³€í™˜ í–‰ë ¬ì˜ ì—­í–‰ë ¬ì„ êµ¬í•œë‹¤. ê°ì²´ì˜ ì›”ë“œ ë³€í™˜ í–‰ë ¬ì´ ì£¼ì–´ì§€ë©´ ëª¨ë¸ ì¢Œí‘œê³„ì˜ í”½í‚¹ ê´‘ì„ ì„ êµ¬í•˜ê³  ê·¸ë ‡ì§€ ì•Šìœ¼ë©´ ì›”ë“œ ì¢Œí‘œê³„ì˜ í”½í‚¹ ê´‘ì„ ì„ êµ¬í•œë‹¤.*/
+	D3DXMATRIX d3dxmtxInverse;
+	D3DXMATRIX d3dxmtxWorldView = *pd3dxmtxView;
+	if (pd3dxmtxWorld) D3DXMatrixMultiply(&d3dxmtxWorldView, pd3dxmtxWorld, pd3dxmtxView);
+	D3DXMatrixInverse(&d3dxmtxInverse, NULL, &d3dxmtxWorldView);
+	D3DXVECTOR3 d3dxvCameraOrigin(0.0f, 0.0f, 0.0f);
+	/*ì¹´ë©”ë¼ ì¢Œí‘œê³„ì˜ ì›ì  (0, 0, 0)ì„ ìœ„ì—ì„œ êµ¬í•œ ì—­í–‰ë ¬ë¡œ ë³€í™˜í•œë‹¤. ë³€í™˜ì˜ ê²°ê³¼ëŠ” ì¹´ë©”ë¼ ì¢Œí‘œê³„ì˜ ì›ì ì— ëŒ€ì‘ë˜ëŠ” ëª¨ë¸ ì¢Œí‘œê³„ì˜ ì  ë˜ëŠ” ì›”ë“œ ì¢Œí‘œê³„ì˜ ì ì´ë‹¤.*/
+	D3DXVec3TransformCoord(pd3dxvPickRayPosition, &d3dxvCameraOrigin, &d3dxmtxInverse);
+	/*ì¹´ë©”ë¼ ì¢Œí‘œê³„ì˜ ì ì„ ìœ„ì—ì„œ êµ¬í•œ ì—­í–‰ë ¬ë¡œ ë³€í™˜í•œë‹¤. ë³€í™˜ì˜ ê²°ê³¼ëŠ” ë§ˆìš°ìŠ¤ë¥¼ í´ë¦­í•œ ì ì— ëŒ€ì‘ë˜ëŠ” ëª¨ë¸ ì¢Œí‘œê³„ì˜ ì  ë˜ëŠ” ì›”ë“œ ì¢Œí‘œê³„ì˜ ì ì´ë‹¤.*/
+	D3DXVec3TransformCoord(pd3dxvPickRayDirection, pd3dxvPickPosition, &d3dxmtxInverse);
+	//í”½í‚¹ ê´‘ì„ ì˜ ë°©í–¥ ë²¡í„°ë¥¼ êµ¬í•œë‹¤.
+	*pd3dxvPickRayDirection = *pd3dxvPickRayDirection - *pd3dxvPickRayPosition;
+}
+int CGameObject::PickObjectByRayIntersection(D3DXVECTOR3 *pd3dxvPickPosition, D3DXMATRIX *pd3dxmtxView, MESHINTERSECTINFO *pd3dxIntersectInfo)
+{
+	D3DXVECTOR3 d3dxvPickRayPosition, d3dxvPickRayDirection;
+	int nIntersected = 0;
+	if (m_bActive && m_ppMeshes)
+	{
+		GenerateRayForPicking(pd3dxvPickPosition, &m_d3dxmtxWorld, pd3dxmtxView, &d3dxvPickRayPosition, &d3dxvPickRayDirection);
+		for (int i = 0; i < m_nMeshes; i++)
+		{
+			nIntersected = m_ppMeshes[i]->CheckRayIntersection(&d3dxvPickRayPosition, &d3dxvPickRayDirection, pd3dxIntersectInfo);
+			if (nIntersected > 0) break;
+		}
+	}
+	return(nIntersected);
+}
 D3DXVECTOR3 CGameObject::GetPosition()
 {
 	return(D3DXVECTOR3(m_d3dxmtxWorld._41, m_d3dxmtxWorld._42, m_d3dxmtxWorld._43));
@@ -80,161 +109,20 @@ void CGameObject::SetMesh(CMesh *pMesh, int nIndex)
 void CGameObject::Animate(float fTimeElapsed)
 {
 }
-
 void CGameObject::Render(ID3D11DeviceContext *pd3dDeviceContext)
 {
 	CShader::UpdateShaderVariables(pd3dDeviceContext, &m_d3dxmtxWorld);
 	if (m_ppMeshes)
+	{
 		for (int i = 0; i < m_nMeshes; i++)
 		{
-			if (m_ppMeshes[i])
-				m_ppMeshes[i]->Render(pd3dDeviceContext);
-		}
-}
-
-bool CGameObject::IsVisible(CCamera* pCamera)
-{
-	OnPrepareRender();
-
-	bool bIsVisible = false;
-
-	if (m_bActive)
-	{
-		AABB bcBoundingCube;
-		bcBoundingCube.Update(&m_d3dxmtxWorld);
-		if (pCamera) bIsVisible = pCamera->IsInFrustum(&bcBoundingCube);
-	}
-	return(bIsVisible);
-}
-
-D3DXVECTOR3 CGameObject::GetLookAt()
-{
-	//°ÔÀÓ °´Ã¼¸¦ ·ÎÄÃ z-Ãà º¤ÅÍ¸¦ ¹İÈ¯ÇÑ´Ù.
-	D3DXVECTOR3 d3dxvLookAt(m_d3dxmtxWorld._31, m_d3dxmtxWorld._32, m_d3dxmtxWorld._33);
-	D3DXVec3Normalize(&d3dxvLookAt, &d3dxvLookAt);
-	return(d3dxvLookAt);
-}
-
-D3DXVECTOR3 CGameObject::GetUp()
-{
-	//°ÔÀÓ °´Ã¼¸¦ ·ÎÄÃ y-Ãà º¤ÅÍ¸¦ ¹İÈ¯ÇÑ´Ù.
-	D3DXVECTOR3 d3dxvUp(m_d3dxmtxWorld._21, m_d3dxmtxWorld._22, m_d3dxmtxWorld._23);
-	D3DXVec3Normalize(&d3dxvUp, &d3dxvUp);
-	return(d3dxvUp);
-}
-
-D3DXVECTOR3 CGameObject::GetRight()
-{
-	//°ÔÀÓ °´Ã¼¸¦ ·ÎÄÃ x-Ãà º¤ÅÍ¸¦ ¹İÈ¯ÇÑ´Ù.
-	D3DXVECTOR3 d3dxvRight(m_d3dxmtxWorld._11, m_d3dxmtxWorld._12, m_d3dxmtxWorld._13);
-	D3DXVec3Normalize(&d3dxvRight, &d3dxvRight);
-	return(d3dxvRight);
-}
-
-void CGameObject::MoveStrafe(float fDistance)
-{
-	//°ÔÀÓ °´Ã¼¸¦ ·ÎÄÃ x-Ãà ¹æÇâÀ¸·Î ÀÌµ¿ÇÑ´Ù.
-	D3DXVECTOR3 d3dxvPosition = GetPosition();
-	D3DXVECTOR3 d3dxvRight = GetRight();
-	d3dxvPosition += fDistance * d3dxvRight;
-	CGameObject::SetPosition(d3dxvPosition);
-}
-
-void CGameObject::MoveUp(float fDistance)
-{
-	//°ÔÀÓ °´Ã¼¸¦ ·ÎÄÃ y-Ãà ¹æÇâÀ¸·Î ÀÌµ¿ÇÑ´Ù.
-	D3DXVECTOR3 d3dxvPosition = GetPosition();
-	D3DXVECTOR3 d3dxvUp = GetUp();
-	d3dxvPosition += fDistance * d3dxvUp;
-	CGameObject::SetPosition(d3dxvPosition);
-}
-
-void CGameObject::MoveForward(float fDistance)
-{
-	//°ÔÀÓ °´Ã¼¸¦ ·ÎÄÃ z-Ãà ¹æÇâÀ¸·Î ÀÌµ¿ÇÑ´Ù.
-	D3DXVECTOR3 d3dxvPosition = GetPosition();
-	D3DXVECTOR3 d3dxvLookAt = GetLookAt();
-	d3dxvPosition += fDistance * d3dxvLookAt;
-	CGameObject::SetPosition(d3dxvPosition);
-}
-
-void CGameObject::Rotate(float fPitch, float fYaw, float fRoll)
-{
-	//°ÔÀÓ °´Ã¼¸¦ ÁÖ¾îÁø °¢µµ·Î È¸ÀüÇÑ´Ù.
-	D3DXMATRIX mtxRotate;
-	D3DXMatrixRotationYawPitchRoll(&mtxRotate, (float)D3DXToRadian(fYaw), (float)D3DXToRadian(fPitch), (float)D3DXToRadian(fRoll));
-	m_d3dxmtxWorld = mtxRotate * m_d3dxmtxWorld;
-}
-
-void CGameObject::Rotate(D3DXVECTOR3 *pd3dxvAxis, float fAngle)
-{
-	//°ÔÀÓ °´Ã¼¸¦ ÁÖ¾îÁø È¸ÀüÃàÀ» Áß½ÉÀ¸·Î È¸ÀüÇÑ´Ù.
-	D3DXMATRIX mtxRotate;
-	D3DXMatrixRotationAxis(&mtxRotate, pd3dxvAxis, (float)D3DXToRadian(fAngle));
-	m_d3dxmtxWorld = mtxRotate * m_d3dxmtxWorld;
-}
-
-void CGameObject::GenerateRayForPicking(D3DXVECTOR3 *pd3dxvPickPosition, D3DXMATRIX *pd3dxmtxWorld, D3DXMATRIX *pd3dxmtxView, D3DXVECTOR3 *pd3dxvPickRayPosition, D3DXVECTOR3 *pd3dxvPickRayDirection)
-{
-	//	pd3dxvPickPosition: Ä«¸Ş¶ó ÁÂÇ¥°èÀÇ Á¡ (È­¸é ÁÂÇ¥°è¿¡¼­ ¸¶¿ì½º¸¦ Å¬¸¯ÇÑ Á¡À» ¿ªº¯È¯ÇÑ Á¡)
-	//	pd3dxmtxWorld : ¿ùµå º¯È¯ Çà·Ä, pd3dxmtxView: Ä«¸Ş¶ó º¯È¯ Çà·Ä
-	//	pd3dxvPickRayPosition: ÇÈÅ· ±¤¼±ÀÇ ½ÃÀÛÁ¡. pd3dxvPickRayDirection: ÇÇÅ· ±¤¼± º¤ÅÍ
-
-	/* 1)°´Ã¼ÀÇ ¿ùµå º¯È¯ Çà·ÄÀÌ ÁÖ¾îÁö¸é °´Ã¼ÀÇ ¿ùµå º¯È² Çà·Ä°ú Ä«¸Ş¶ó º¯È¯ Çà·ÄÀ» °öÇÏ°í, ¿ªÇà·ÄÀ» ±¸ÇÑ´Ù.
-	('ÀÌ°Í'Àº Ä«¸Ş¶ó º¯È² Çà·ÄÀÇ ¿ªÇà·Ä°ú °´Ã¼ÀÇ ¿ùµå º¯È¯ Çà·ÄÀÇ ¿ªÇà·ÄÀÇ °ö°ú °°´Ù.)
-
-	°´Ã¼ÀÇ ¿ùµå º¯È¯ Çà·ÄÀÌ ÁÖ¾îÁöÁö ¾ÊÀ¸¸é Ä«¸Ş¶ó º¯È¯ Çà·ÄÀÇ ¿ªÇà·ÄÀ» ±¸ÇÑ´Ù.
-	°´Ã¼ÀÇ ¿ùµå º¯È¯ Çà·ÄÀÌ ÁÖ¾îÁö¸é ¸ğµ¨ ÁÂÇ¥°èÀÇ ÇÈÅ· ±¤¼±À» ±¸ÇÏ°í, ±×·¸Áö ¾ÊÀ¸¸é ¿ùµå ÁÂÇ¥°èÀÇ ÇÈÅ· ±¤¼±À» ±¸ÇÑ´Ù. */
-
-	D3DXMATRIX d3dxmtxInverse;
-	D3DXMATRIX d3dxmtxWorldView = *pd3dxmtxView;
-
-	if (pd3dxmtxWorld) D3DXMatrixMultiply(&d3dxmtxWorldView, pd3dxmtxWorld, pd3dxmtxView);
-	D3DXMatrixInverse(&d3dxmtxInverse, NULL, &d3dxmtxWorldView);
-
-	/* Ä«¸Ş¶ó ÁÂÇ¥°èÀÇ ¿øÁ¡ (0, 0, 0)À» À§¿¡¼­ ±¸ÇÑ  ¿ªÇà·Ä·Î º¯È¯ÇÑ´Ù.
-	º¯È¯ÀÇ °á°ú´Â 'Ä«¸Ş¶ó ÁÂÇ¥°èÀÇ ¿øÁ¡'¿¡ ´ëÀÀÇÏ´Â ¸ğµ¨ ÁÂÇ¥°èÀÇ Á¡ ¶Ç´Â ¿ùµå ÁÂÇ¥°èÀÇ Á¡ÀÌ´Ù.*/
-	D3DXVECTOR3 d3dxvCameraOrigin(0.0f, 0.0f, 0.0f);
-	D3DXVec3TransformCoord(pd3dxvPickRayPosition, &d3dxvCameraOrigin, &d3dxmtxInverse);
-
-	/* Ä«¸Ş¶ó ÁÂÇ¥°èÀÇ Á¡À» À§¿¡¼­ ±¸ÇÑ ¿ªÇà·Ä·Î º¯È¯ÇÑ´Ù.
-	º¯È¯ÀÇ °á°ú´Â '¸¶¿ì½º¸¦ Å¬¸¯ÇÑ Á¡'¿¡ ´ëÀÀµÇ´Â ¸ğµ¨ ÁÂÇ¥°èÀÇ Á¡ ¶Ç´Â ¿ùµå ÁÂÇ¥°èÀÇ Á¡ÀÌ´Ù. */
-	D3DXVec3TransformCoord(pd3dxvPickRayDirection, pd3dxvPickPosition, &d3dxmtxInverse);
-
-	// ÇÈÅ· ±¤¼±ÀÇ ¹æÇâ º¤ÅÍ¸¦ ±¸ÇÑ´Ù.
-	*pd3dxvPickRayDirection = *pd3dxvPickRayDirection - *pd3dxvPickRayPosition;
-}
-
-
-int CGameObject::PickObjectByRayIntersection(D3DXVECTOR3 *pd3dxvPickPosition, D3DXMATRIX *pd3dxmtxView, MESHINTERSECTINFO* pd3dxIntersectInfo)
-{
-	// pd3dxvPickPosition : Ä«¸Ş¶ó ÁÂÇ¥°èÀÇ Á¡(È­¸é ÁÂÇ¥°è¿¡¼­ ¸¶¿ì½º¸¦ Å¬¸¯ÇÑ Á¡À» ¿ªº¯È¯ÇÑ Á¡)
-	// pd3dxmtxView : Ä«¸Ş¶ó º¯È¯ Çà·Ä
-	D3DXVECTOR3 d3dxvPickRayPosition, d3dxvPickRayDirection;
-	int nIntersected = 0;
-
-	// È°¼ºÈ­µÈ °´Ã¼¿¡ ´ëÇÏ¿© ¸Ş½¬°¡ ÀÖÀ¸¸é ÇÈÅ· ±¤¼±À» ±¸ÇÏ°í °´Ã¼ÀÇ ¸Ş½¬¿Í Ãæµ¹ °Ë»ç¸¦ ÇÑ´Ù.
-	if (m_bActive && m_ppMeshes)
-	{
-		// °´Ã¼ÀÇ ¸ğµ¨ ÁÂÇ¥°èÀÇ ÇÈÅ· ±¤¼±À» ±¸ÇÑ´Ù.
-		GenerateRayForPicking(pd3dxvPickPosition, &m_d3dxmtxWorld, pd3dxmtxView, &d3dxvPickRayPosition, &d3dxvPickRayDirection);
-
-		/* ¸ğµ¨ ÁÂÇ¥°èÀÇ ÇÈÅ· ±¤¼±°ú ¸Ş½¬ÀÇ Ãæµ¹À» °Ë»çÇÑ´Ù. ÇÈÅ· ±¤¼±°ú ¸Ş½¬ÀÇ »ï°¢ÇüµéÀº ¿©·¯ ¹ø Ãæµ¹ÇÒ ¼ö ÀÖ´Ù.
-		°Ë»çÀÇ °á°ú´Â Ãæµ¹µÈ È½¼öÀÌ´Ù.*/
-		for (int i = 0; i < m_nMeshes; i++)
-		{
-			nIntersected = m_ppMeshes[i]->CheckRayIntersection(&d3dxvPickRayPosition, &d3dxvPickRayDirection, pd3dxIntersectInfo);
-			if (nIntersected > 0) break;
+			if (m_ppMeshes[i]) m_ppMeshes[i]->Render(pd3dDeviceContext);
 		}
 	}
-	return (nIntersected);
-}
-
-
-#pragma region __CRotatingObject__
+} 
+/////////////////////// Rotating 
 CRotatingObject::CRotatingObject(int nMeshes) : CGameObject(nMeshes)
 {
-	m_d3dxvRotationAxis = D3DXVECTOR3(0.0f, 1.0f, 0.0f);
 	m_fRotationSpeed = 15.0f;
 }
 
@@ -252,14 +140,93 @@ void CRotatingObject::Render(ID3D11DeviceContext *pd3dDeviceContext)
 {
 	CGameObject::Render(pd3dDeviceContext);
 }
-#pragma endregion
+
+D3DXVECTOR3 CGameObject::GetLookAt()
+{
+	//ê²Œì„ ê°ì²´ë¥¼ ë¡œì»¬ z-ì¶• ë²¡í„°ë¥¼ ë°˜í™˜í•œë‹¤.
+	D3DXVECTOR3 d3dxvLookAt(m_d3dxmtxWorld._31, m_d3dxmtxWorld._32, m_d3dxmtxWorld._33);
+	D3DXVec3Normalize(&d3dxvLookAt, &d3dxvLookAt);
+	return(d3dxvLookAt);
+}
+
+D3DXVECTOR3 CGameObject::GetUp()
+{
+	//ê²Œì„ ê°ì²´ë¥¼ ë¡œì»¬ y-ì¶• ë²¡í„°ë¥¼ ë°˜í™˜í•œë‹¤.
+	D3DXVECTOR3 d3dxvUp(m_d3dxmtxWorld._21, m_d3dxmtxWorld._22, m_d3dxmtxWorld._23);
+	D3DXVec3Normalize(&d3dxvUp, &d3dxvUp);
+	return(d3dxvUp);
+}
+
+D3DXVECTOR3 CGameObject::GetRight()
+{
+	//ê²Œì„ ê°ì²´ë¥¼ ë¡œì»¬ x-ì¶• ë²¡í„°ë¥¼ ë°˜í™˜í•œë‹¤.
+	D3DXVECTOR3 d3dxvRight(m_d3dxmtxWorld._11, m_d3dxmtxWorld._12, m_d3dxmtxWorld._13);
+	D3DXVec3Normalize(&d3dxvRight, &d3dxvRight);
+	return(d3dxvRight);
+}
+
+void CGameObject::MoveStrafe(float fDistance)
+{
+	//ê²Œì„ ê°ì²´ë¥¼ ë¡œì»¬ x-ì¶• ë°©í–¥ìœ¼ë¡œ ì´ë™í•œë‹¤.
+	D3DXVECTOR3 d3dxvPosition = GetPosition();
+	D3DXVECTOR3 d3dxvRight = GetRight();
+	d3dxvPosition += fDistance * d3dxvRight;
+	CGameObject::SetPosition(d3dxvPosition);
+}
+
+void CGameObject::MoveUp(float fDistance)
+{
+	//ê²Œì„ ê°ì²´ë¥¼ ë¡œì»¬ y-ì¶• ë°©í–¥ìœ¼ë¡œ ì´ë™í•œë‹¤.
+	D3DXVECTOR3 d3dxvPosition = GetPosition();
+	D3DXVECTOR3 d3dxvUp = GetUp();
+	d3dxvPosition += fDistance * d3dxvUp;
+	CGameObject::SetPosition(d3dxvPosition);
+}
+
+void CGameObject::MoveForward(float fDistance)
+{
+	//ê²Œì„ ê°ì²´ë¥¼ ë¡œì»¬ z-ì¶• ë°©í–¥ìœ¼ë¡œ ì´ë™í•œë‹¤.
+	D3DXVECTOR3 d3dxvPosition = GetPosition();
+	D3DXVECTOR3 d3dxvLookAt = GetLookAt();
+	d3dxvPosition += fDistance * d3dxvLookAt;
+	CGameObject::SetPosition(d3dxvPosition);
+}
+
+void CGameObject::Rotate(float fPitch, float fYaw, float fRoll)
+{
+	//ê²Œì„ ê°ì²´ë¥¼ ì£¼ì–´ì§„ ê°ë„ë¡œ íšŒì „í•œë‹¤.
+	D3DXMATRIX mtxRotate;
+	D3DXMatrixRotationYawPitchRoll(&mtxRotate, (float)D3DXToRadian(fYaw), (float)D3DXToRadian(fPitch), (float)D3DXToRadian(fRoll));
+	m_d3dxmtxWorld = mtxRotate * m_d3dxmtxWorld;
+}
+
+void CGameObject::Rotate(D3DXVECTOR3 *pd3dxvAxis, float fAngle)
+{
+	//ê²Œì„ ê°ì²´ë¥¼ ì£¼ì–´ì§„ íšŒì „ì¶•ì„ ì¤‘ì‹¬ìœ¼ë¡œ íšŒì „í•œë‹¤.
+	D3DXMATRIX mtxRotate;
+	D3DXMatrixRotationAxis(&mtxRotate, pd3dxvAxis, (float)D3DXToRadian(fAngle));
+	m_d3dxmtxWorld = mtxRotate * m_d3dxmtxWorld;
+}
+bool CGameObject::IsVisible(CCamera *pCamera)
+{
+	OnPrepareRender();
+
+	bool bIsVisible = false;
+	if (m_bActive)
+	{
+		AABB bcBoundingCube = m_bcMeshBoundingCube;
+		bcBoundingCube.Update(&m_d3dxmtxWorld);
+		if (pCamera) bIsVisible = pCamera->IsInFrustum(&bcBoundingCube);
+	}
+	return(bIsVisible);
+}
 
 
-#pragma region __CRevolvingObject__
+/////////////////////// ê³µì „ ì˜¤ë¸Œì íŠ¸ ///////////////////////
 CRevolvingObject::CRevolvingObject(int nMeshes) : CGameObject(nMeshes)
 {
 	m_d3dxvRevolutionAxis = D3DXVECTOR3(1.0f, 0.0f, 0.0f);
-	m_fRevolutionSpeed = 1.0f;
+	m_fRevolutionSpeed = 0.0f;
 }
 
 CRevolvingObject::~CRevolvingObject()
@@ -268,72 +235,64 @@ CRevolvingObject::~CRevolvingObject()
 
 void CRevolvingObject::Animate(float fTimeElapsed)
 {
-	//°øÀüÀ» ³ªÅ¸³»±â À§ÇØ È¸Àü Çà·ÄÀ» ¿À¸¥ÂÊ¿¡ °öÇÑ´Ù.
+	//ê³µì „ì„ ë‚˜íƒ€ë‚´ê¸° ìœ„í•´ íšŒì „ í–‰ë ¬ì„ ì˜¤ë¥¸ìª½ì— ê³±í•œë‹¤.
 	D3DXMATRIX mtxRotate;
 	D3DXMatrixRotationAxis(&mtxRotate, &m_d3dxvRevolutionAxis, (float)D3DXToRadian(m_fRevolutionSpeed * fTimeElapsed));
 	m_d3dxmtxWorld = m_d3dxmtxWorld * mtxRotate;
 }
-#pragma endregion
 
-
-#pragma region __CHeightMap__
 CHeightMap::CHeightMap(LPCTSTR pFileName, int nWidth, int nLength, D3DXVECTOR3 d3dxvScale)
 {
 	m_nWidth = nWidth;
 	m_nLength = nLength;
 	m_d3dxvScale = d3dxvScale;
 
-	BYTE *pHeightMapImage = new BYTE[m_nWidth*m_nLength];
+	BYTE *pHeightMapImage = new BYTE[m_nWidth * m_nLength];
 
-	// ÆÄÀÏÀ» ¿­°í ÀĞ´Â´Ù. ³ôÀÌ ¸Ê ÀÌ¹ÌÁö´Â ÆÄÀÏ Çì´õ°¡ ¾ø´Â RAW ÀÌ¹ÌÁöÀÌ´Ù.
+	//íŒŒì¼ì„ ì—´ê³  ì½ëŠ”ë‹¤. ë†’ì´ ë§µ ì´ë¯¸ì§€ëŠ” íŒŒì¼ í—¤ë”ê°€ ì—†ëŠ” RAW ì´ë¯¸ì§€ì´ë‹¤.
 	HANDLE hFile = ::CreateFile(pFileName, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_READONLY, NULL);
-
 	DWORD dwBytesRead;
 	::ReadFile(hFile, pHeightMapImage, (m_nWidth * m_nLength), &dwBytesRead, NULL);
 	::CloseHandle(hFile);
-
-	/* ÀÌ¹ÌÁöÀÇ y-Ãà°ú ÁöÇüÀÇ z-ÃàÀÌ ¹æÇâÀÌ ¹İ´ëÀÌ¹Ç·Î ÀÌ¹ÌÁö¸¦ »óÇÏ´ëÄª ½ÃÄÑ ÀúÀåÇÑ´Ù.
-	±×·¯¸é ÀÌ¹ÌÁöÀÇ ÁÂÇ¥Ãà°ú ÁöÇüÀÇ ÁÂÇ¥ÃàÀÇ ¹æÇâÀÌ ÀÏÄ¡ÇÏ°Ô µÈ´Ù.*/
+	/*ì´ë¯¸ì§€ì˜ y-ì¶•ê³¼ ì§€í˜•ì˜ z-ì¶•ì´ ë°©í–¥ì´ ë°˜ëŒ€ì´ë¯€ë¡œ ì´ë¯¸ì§€ë¥¼ ìƒí•˜ëŒ€ì¹­ ì‹œì¼œ ì €ì¥í•œë‹¤. ê·¸ëŸ¬ë©´ <ê·¸ë¦¼ 7>ê³¼ ê°™ì´ ì´ë¯¸ì§€ì˜ ì¢Œí‘œì¶•ê³¼ ì§€í˜•ì˜ ì¢Œí‘œì¶•ì˜ ë°©í–¥ì´ ì¼ì¹˜í•˜ê²Œ ëœë‹¤.*/
 	m_pHeightMapImage = new BYTE[m_nWidth * m_nLength];
 	for (int y = 0; y < m_nLength; y++)
 	{
 		for (int x = 0; x < m_nWidth; x++)
 		{
-			m_pHeightMapImage[x + ((m_nLength - 1 - y) * m_nWidth)] = pHeightMapImage[x + (y*m_nWidth)];
+			m_pHeightMapImage[x + ((m_nLength - 1 - y)*m_nWidth)] = pHeightMapImage[x + (y*m_nWidth)];
 		}
 	}
+
 	if (pHeightMapImage) delete[] pHeightMapImage;
 }
-
 CHeightMap::~CHeightMap()
 {
 	if (m_pHeightMapImage) delete[] m_pHeightMapImage;
 	m_pHeightMapImage = NULL;
 }
 
-// ÀÌ ÇÔ¼ö´Â ÁöÇüÀÇ (x, z)ÁÂÇ¥°¡ ÁÖ¾îÁú ¶§ ³ôÀÌ ¸Ê (x, z)ÁÂÇ¥¿¡¼­ ÁöÇüÀÇ ¹ı¼± º¤ÅÍ¸¦ °è»êÇÑ´Ù.
 D3DXVECTOR3 CHeightMap::GetHeightMapNormal(int x, int z)
 {
-	// ÁöÇüÀÇ x-ÁÂÇ¥¿Í z-ÁÂÇ¥°¡ ÁöÇü(³ôÀÌ ¸Ê)ÀÇ ¹üÀ§¸¦ ¹ş¾î³ª¸é ÁöÇüÀÇ ¹ı¼± º¤ÅÍ´Â y-Ãà ¹æÇâ º¤ÅÍÀÌ´Ù.
-	if ((x < 0.0f) || (z < 0.0f) || (x >= m_nWidth) || (z >= m_nLength))
-		return (D3DXVECTOR3(0.0f, 1.0f, 0.0f));
+	//ì§€í˜•ì˜ x-ì¢Œí‘œì™€ z-ì¢Œí‘œê°€ ì§€í˜•(ë†’ì´ ë§µ)ì˜ ë²”ìœ„ë¥¼ ë²—ì–´ë‚˜ë©´ ì§€í˜•ì˜ ë²•ì„  ë²¡í„°ëŠ” y-ì¶• ë°©í–¥ ë²¡í„°ì´ë‹¤.
+	if ((x < 0.0f) || (z < 0.0f) || (x >= m_nWidth) || (z >= m_nLength)) return(D3DXVECTOR3(0.0f, 1.0f, 0.0f));
 
-	/* ³ôÀÌ ¸Ê¿¡¼­ (x, z)ÁÂÇ¥ÀÇ ÇÈ¼¿ °ª°ú ÀÎÁ¢ÇÑ µÎ °³ÀÇ Á¡(x+1, z), (z, z+1)¿¡ ´ëÇÑ ÇÈ¼¿ °ªÀ» »ç¿ëÇÏ¿© ¹ı¼± º¤ÅÍ¸¦ °è»êÇÑ´Ù.*/
-	int nHeightMapIndex = x + (z*m_nWidth);
+	/*ë†’ì´ ë§µì—ì„œ (x, z) ì¢Œí‘œì˜ í”½ì…€ ê°’ê³¼ ì¸ì ‘í•œ ë‘ ê°œì˜ ì  (x+1, z), (z, z+1)ì— ëŒ€í•œ í”½ì…€ ê°’ì„ ì‚¬ìš©í•˜ì—¬ ë²•ì„  ë²¡í„°ë¥¼ ê³„ì‚°í•œë‹¤.*/
+	int nHeightMapIndex = x + (z * m_nWidth);
 	int xHeightMapAdd = (x < (m_nWidth - 1)) ? 1 : -1;
 	int zHeightMapAdd = (z < (m_nLength - 1)) ? m_nWidth : -(signed)m_nWidth;
-
-	// (x, z), (x+1, z), (z, z+1)ÀÇ ÁöÇüÀÇ ³ôÀÌ °ªÀ» ±¸ÇÑ´Ù.
+	//(x, z), (x+1, z), (z, z+1)ì˜ ì§€í˜•ì˜ ë†’ì´ ê°’ì„ êµ¬í•œë‹¤.
 	float y1 = (float)m_pHeightMapImage[nHeightMapIndex] * m_d3dxvScale.y;
 	float y2 = (float)m_pHeightMapImage[nHeightMapIndex + xHeightMapAdd] * m_d3dxvScale.y;
 	float y3 = (float)m_pHeightMapImage[nHeightMapIndex + zHeightMapAdd] * m_d3dxvScale.y;
 
-	// vEdge1Àº (0, y3, m_vScale.z) - (0, y1, 0) º¤ÅÍÀÌ´Ù.
+	//vEdge1ì€ (0, y3, m_vScale.z) - (0, y1, 0) ë²¡í„°ì´ë‹¤.
 	D3DXVECTOR3 vEdge1 = D3DXVECTOR3(0.0f, y3 - y1, m_d3dxvScale.z);
-	// vEdge2´Â (m_vScale.x, y2, 0) - (0, y1, 0) º¤ÅÍÀÌ´Ù.
+	//vEdge2ëŠ” (m_vScale.x, y2, 0) - (0, y1, 0) ë²¡í„°ì´ë‹¤.
 	D3DXVECTOR3 vEdge2 = D3DXVECTOR3(m_d3dxvScale.x, y2 - y1, 0.0f);
-	// ¹ı¼± º¤ÅÍ´Â vEdge1°ú vEdge2ÀÇ ¿ÜÀûÀ» Á¤±ÔÈ­ÇÏ¸é µÈ´Ù.
+	//ë²•ì„  ë²¡í„°ëŠ” vEdge1ê³¼ vEdge2ì˜ ì™¸ì ì„ ì •ê·œí™”í•˜ë©´ ëœë‹¤.
 	D3DXVECTOR3 vNormal;
+
 	D3DXVec3Cross(&vNormal, &vEdge1, &vEdge2);
 	D3DXVec3Normalize(&vNormal, &vNormal);
 	return(vNormal);
@@ -341,92 +300,79 @@ D3DXVECTOR3 CHeightMap::GetHeightMapNormal(int x, int z)
 
 float CHeightMap::GetHeight(float fx, float fz, bool bReverseQuad)
 {
-	// ÁöÇüÀÇ ÁÂÇ¥ (fx, fz)¿¡¼­ ³ôÀÌ ¸ÊÀÇ ÁÂÇ¥¸¦ °è»êÇÑ´Ù.
+	//ì§€í˜•ì˜ ì¢Œí‘œ (fx, fz)ì—ì„œ ë†’ì´ ë§µì˜ ì¢Œí‘œë¥¼ ê³„ì‚°í•œë‹¤.
 	fx = fx / m_d3dxvScale.x;
 	fz = fz / m_d3dxvScale.z;
-
-	// ³ôÀÌ ¸ÊÀÇ x-ÁÂÇ¥¿Í z-ÁÂÇ¥°¡ ³ôÀÌ ¸ÊÀÇ ¹üÀ§¸¦ ¹ş¾î³ª¸é ÁöÇüÀÇ ³ôÀÌ´Â 0ÀÌ´Ù.
-	if ((fx < 0.0f) || (fz<0.0f) || (fx >-m_nWidth) || (fz >= m_nLength))
-		return (0.0f);
-	
-	// ³ôÀÌ ¸ÊÀÇ ÁÂÇ¥ÀÇ Á¤¼ö ºÎºĞ°ú ¼Ò¼ö ºÎºĞÀ» °è»êÇÑ´Ù.
-	int x = (int)fx;
-	int z = (int)fz;
-	float fxPercent = fx - x;
-	float fzPercent = fz - z;
+	//ë†’ì´ ë§µì˜ x-ì¢Œí‘œì™€ z-ì¢Œí‘œê°€ ë†’ì´ ë§µì˜ ë²”ìœ„ë¥¼ ë²—ì–´ë‚˜ë©´ ì§€í˜•ì˜ ë†’ì´ëŠ” 0ì´ë‹¤.
+	if ((fx < 0.0f) || (fz < 0.0f) || (fx >= m_nWidth) || (fz >= m_nLength)) return(0.0f);
+	//ë†’ì´ ë§µì˜ ì¢Œí‘œì˜ ì •ìˆ˜ ë¶€ë¶„ê³¼ ì†Œìˆ˜ ë¶€ë¶„ì„ ê³„ì‚°í•œë‹¤.
+	int x = (int)fx, z = (int)fz;
+	float fxPercent = fx - x, fzPercent = fz - z;
 
 	float fTopLeft = m_pHeightMapImage[x + (z*m_nWidth)];
 	float fTopRight = m_pHeightMapImage[(x + 1) + (z*m_nWidth)];
-	float fBottomLeft = m_pHeightMapImage[x + ((z + 1) * m_nWidth)];
-	float fBottomRight = m_pHeightMapImage[(x + 1) + ((z + 1) * m_nWidth)];
+	float fBottomLeft = m_pHeightMapImage[x + ((z + 1)*m_nWidth)];
+	float fBottomRight = m_pHeightMapImage[(x + 1) + ((z + 1)*m_nWidth)];
 
 	if (bReverseQuad)
 	{
-		/* ÁöÇüÀÇ »ï°¢ÇüµéÀÌ ¿À¸¥ÂÊ¿¡¼­ ¿ŞÂÊ ¹æÇâÀ¸·Î ³ª¿­µÇ´Â °æ¿ìÀÌ´Ù.
-		fzPercent < fxPercentÀÎ °æ¿ì. TopLeftÀÇ ÇÈ¼¿ °ªÀº (fTopLeft = fTopRight + (fBottomLeft - fBottomRight))·Î ±Ù»çÇÑ´Ù.
-		fzPercent > fxPercentÀÎ °æ¿ì, BottomRightÀÇ ÇÈ¼¿ °ªÀº (fBottomRight = fBottomLeft +(fTopRight - fTopLeft))·Î ±Ù»çÇÑ´Ù.*/
-		if(fzPercent < (1.0f - fxPercent))
-			fTopRight = fTopLeft + (fBottomRight - fBottomLeft);
-		else
-			fBottomLeft = fTopLeft + (fBottomRight - fTopRight);
-	}
-	else
-	{
-		/* ÁöÇüÀÇ »ï°¢ÇüµéÀÌ ¿ŞÂÊ¿¡¼­ ¿À¸¥ÂÊ ¹æÇâÀ¸·Î ³ª¿­µÇ´Â °æ¿ìÀÌ´Ù.
-		(fzPercent < (1.0f - fxPercent))ÀÎ °æ¿ì TopRightÀÇ ÇÈ¼¿ °ªÀº (fTopRight = fTopLeft + (fBottomRight - fBottomLeft))·Î ±Ù»çÇÑ´Ù.
-		(fzPercent ¡Ã (1.0f - fxPercent))ÀÎ °æ¿ì BottomLeftÀÇ ÇÈ¼¿ °ªÀº (fBottomLeft = fTopLeft + (fBottomRight - fTopRight))·Î ±Ù»çÇÑ´Ù.*/ 
+		/*ì§€í˜•ì˜ ì‚¼ê°í˜•ë“¤ì´ ì˜¤ë¥¸ìª½ì—ì„œ ì™¼ìª½ ë°©í–¥ìœ¼ë¡œ ë‚˜ì—´ë˜ëŠ” ê²½ìš°ì´ë‹¤. <ê·¸ë¦¼ 12>ì˜ ì˜¤ë¥¸ìª½ì€ (fzPercent < fxPercent)ì¸ ê²½ìš°ì´ë‹¤. 
+		ì´ ê²½ìš° TopLeftì˜ í”½ì…€ ê°’ì€ (fTopLeft = fTopRight + (fBottomLeft - fBottomRight))ë¡œ ê·¼ì‚¬í•œë‹¤. <ê·¸ë¦¼ 12>ì˜ ì™¼ìª½ì€ (fzPercent â‰¥ fxPercent)ì¸ ê²½ìš°ì´ë‹¤. ì´ ê²½ìš° BottomRightì˜ í”½ì…€ ê°’ì€ (fBottomRight = fBottomLeft + (fTopRight - fTopLeft))ë¡œ ê·¼ì‚¬í•œë‹¤.*/ 
 		if (fzPercent >= fxPercent)
 			fBottomRight = fBottomLeft + (fTopRight - fTopLeft);
 		else
 			fTopLeft = fTopRight + (fBottomLeft - fBottomRight);
 	}
-	// »ç°¢ÇüÀÇ ³× Á¡À» º¸°£ÇÏ¿© ³ôÀÌ( ÇÈ¼¿ °ª)À» °è»êÇÑ´Ù.
-	float fTopHeight = fTopLeft*(1 - fxPercent) + fTopRight * fxPercent;
+	else
+	{
+		/*ì§€í˜•ì˜ ì‚¼ê°í˜•ë“¤ì´ ì™¼ìª½ì—ì„œ ì˜¤ë¥¸ìª½ ë°©í–¥ìœ¼ë¡œ ë‚˜ì—´ë˜ëŠ” ê²½ìš°ì´ë‹¤. <ê·¸ë¦¼ 13>ì˜ ì™¼ìª½ì€ (fzPercent < (1.0f - fxPercent))ì¸ ê²½ìš°ì´ë‹¤. 
+		ì´ ê²½ìš° TopRightì˜ í”½ì…€ ê°’ì€ (fTopRight = fTopLeft + (fBottomRight - fBottomLeft))ë¡œ ê·¼ì‚¬í•œë‹¤. <ê·¸ë¦¼ 13>ì˜ ì˜¤ë¥¸ìª½ì€ (fzPercent â‰¥ (1.0f - fxPercent))ì¸ ê²½ìš°ì´ë‹¤. ì´ ê²½ìš° BottomLeftì˜ í”½ì…€ ê°’ì€ (fBottomLeft = fTopLeft + (fBottomRight - fTopRight))ë¡œ ê·¼ì‚¬í•œë‹¤.*/
+		if (fzPercent < (1.0f - fxPercent))
+			fTopRight = fTopLeft + (fBottomRight - fBottomLeft);
+		else
+			fBottomLeft = fTopLeft + (fBottomRight - fTopRight);
+	}
+	//ì‚¬ê°í˜•ì˜ ë„¤ ì ì„ ë³´ê°„í•˜ì—¬ ë†’ì´(í”½ì…€ ê°’)ë¥¼ ê³„ì‚°í•œë‹¤.
+	float fTopHeight = fTopLeft * (1 - fxPercent) + fTopRight * fxPercent;
 	float fBottomHeight = fBottomLeft * (1 - fxPercent) + fBottomRight * fxPercent;
-	 
-	float fHeight = fBottomHeight*(1 - fzPercent) + fTopHeight*fzPercent;
-	return fHeight;
+	float fHeight = fBottomHeight * (1 - fzPercent) + fTopHeight * fzPercent;
+	return(fHeight);
 }
 
-CHeightMapTerrain::CHeightMapTerrain(ID3D11Device* pd3dDevice, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, D3DXVECTOR3 d3dxvScale, D3DXCOLOR d3dxColor) : CGameObject(0)
+CHeightMapTerrain::CHeightMapTerrain(ID3D11Device *pd3dDevice, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, D3DXVECTOR3 d3dxvScale, D3DXCOLOR d3dxColor) : CGameObject(0)
 {
-	// ÁöÇü¿¡ »ç¿ëÇÒ ³ôÀÌ ¸ÊÀÇ °¡·Î, ¼¼·ÎÀÇ Å©±âÀÌ´Ù.
+	//ì§€í˜•ì— ì‚¬ìš©í•  ë†’ì´ ë§µì˜ ê°€ë¡œ, ì„¸ë¡œì˜ í¬ê¸°ì´ë‹¤.
 	m_nWidth = nWidth;
 	m_nLength = nLength;
 
-	/* ÁöÇü °´Ã¼´Â °İÀÚ ¸Ş½¬µéÀÇ ¹è¿­·Î ¸¸µé °ÍÀÌ´Ù. nBlockWidth, nBlockLength´Â °İÀÚ ¸Ş½¬ ÇÏ³ªÀÇ °¡·Î ¼¼·Î Å©±âÀÌ´Ù.
-	cwQuadsPerBlock, czQuadPerBlockÀº °İÀÚ ¸Ş½¬ÀÇ °¡·Î ¹æÇâ°ú ¼¼·Î ¹æÇâ »ç°¢ÇüÀÇ °³¼ö ÀÌ´Ù.*/
+	/*ì§€í˜• ê°ì²´ëŠ” ê²©ì ë©”ì‰¬ë“¤ì˜ ë°°ì—´ë¡œ ë§Œë“¤ ê²ƒì´ë‹¤. nBlockWidth, nBlockLengthëŠ” ê²©ì ë©”ì‰¬ í•˜ë‚˜ì˜ ê°€ë¡œ, ì„¸ë¡œ í¬ê¸°ì´ë‹¤. cxQuadsPerBlock, czQuadsPerBlockì€ ê²©ì ë©”ì‰¬ì˜ ê°€ë¡œ ë°©í–¥ê³¼ ì„¸ë¡œ ë°©í–¥ ì‚¬ê°í˜•ì˜ ê°œìˆ˜ì´ë‹¤.*/
 	int cxQuadsPerBlock = nBlockWidth - 1;
 	int czQuadsPerBlock = nBlockLength - 1;
 
-	// d3dxvScale´Â ÁöÇüÀ» ½ÇÁ¦·Î ¸î ¹è È®´ëÇÒ °ÍÀÎ°¡¸¦ ³ªÅ¸³½´Ù.
+	//d3dxvScaleëŠ” ì§€í˜•ì„ ì‹¤ì œë¡œ ëª‡ ë°° í™•ëŒ€í•  ê²ƒì¸ê°€ë¥¼ ë‚˜íƒ€ë‚¸ë‹¤.
 	m_d3dxvScale = d3dxvScale;
 
-	// ÁöÇü¿¡ »ç¿ëÇÒ ³ôÀÌ ¸ÊÀ» »ı¼ºÇÑ´Ù.
+	//ì§€í˜•ì— ì‚¬ìš©í•  ë†’ì´ ë§µì„ ìƒì„±í•œë‹¤.
 	m_pHeightMap = new CHeightMap(pFileName, nWidth, nLength, d3dxvScale);
 
-	// ÁöÇü¿¡¼­ °¡·Î, ¼¼·Î ¹æÇâÀ¸·Î °İÀÚ ¸Ş½¬°¡ ¸î °³°¡ ÀÖ´Â °¡¸¦ ³ªÅ¸³½´Ù.
+	//ì§€í˜•ì—ì„œ ê°€ë¡œ ë°©í–¥, ì„¸ë¡œ ë°©í–¥ìœ¼ë¡œ ê²©ì ë©”ì‰¬ê°€ ëª‡ ê°œê°€ ìˆëŠ” ê°€ë¥¼ ë‚˜íƒ€ë‚¸ë‹¤.
 	int cxBlocks = (m_nWidth - 1) / cxQuadsPerBlock;
 	int czBlocks = (m_nLength - 1) / czQuadsPerBlock;
-
-	// ÁöÇü ÀüÃ¼¸¦ Ç¥ÇöÇÏ±â À§ÇÑ °İÀÚ ¸Ş½¬ÀÇ °³¼öÀÌ´Ù.
+	//ì§€í˜• ì „ì²´ë¥¼ í‘œí˜„í•˜ê¸° ìœ„í•œ ê²©ì ë©”ì‰¬ì˜ ê°œìˆ˜ì´ë‹¤.
 	m_nMeshes = cxBlocks * czBlocks;
-
-	// ÁöÇü ÀüÃ¼¸¦ Ç¥ÇöÇÏ±â À§ÇÑ °İÀÚ ¸Ş½¬¿¡ ´ëÇÑ Æ÷ÀÎÅÍ ¹è¿­À» »ı¼ºÇÑ´Ù.
+	//ì§€í˜• ì „ì²´ë¥¼ í‘œí˜„í•˜ê¸° ìœ„í•œ ê²©ì ë©”ì‰¬ì— ëŒ€í•œ í¬ì¸í„° ë°°ì—´ì„ ìƒì„±í•œë‹¤.
 	m_ppMeshes = new CMesh*[m_nMeshes];
-	for (int i = 0; i < m_nMeshes; i++) m_ppMeshes[i] = NULL;
+	for (int i = 0; i < m_nMeshes; i++)m_ppMeshes[i] = NULL;
 
-	CHeightMapGridMesh* pHeightMapGridMesh = NULL;
+	CHeightMapGridMesh *pHeightMapGridMesh = NULL;
 	for (int z = 0, zStart = 0; z < czBlocks; z++)
 	{
 		for (int x = 0, xStart = 0; x < cxBlocks; x++)
 		{
-			// ÁöÇüÀÇ ÀÏºÎºĞÀ» ³ªÅ¸³»´Â °İÀÚ ¸Ş½¬ÀÇ ½ÃÀÛ À§Ä¡ÀÌ´Ù.
-			xStart = x*(nBlockWidth - 1);
-			zStart = z*(nBlockLength - 1);
-
-
-			// ÁöÇüÀÇ ÀÏºÎºĞÀ» ³ªÅ¸³»´Â °İÀÚ ¸Ş½¬¸¦ »ı¼ºÇÏ¿© ÁöÇü ¸Ş½¬¿¡ ÀúÀåÇÑ´Ù.
+			//ì§€í˜•ì˜ ì¼ë¶€ë¶„ì„ ë‚˜íƒ€ë‚´ëŠ” ê²©ì ë©”ì‰¬ì˜ ì‹œì‘ ìœ„ì¹˜ì´ë‹¤.
+			xStart = x * (nBlockWidth - 1);
+			zStart = z * (nBlockLength - 1);
+			//ì§€í˜•ì˜ ì¼ë¶€ë¶„ì„ ë‚˜íƒ€ë‚´ëŠ” ê²©ì ë©”ì‰¬ë¥¼ ìƒì„±í•˜ì—¬ ì§€í˜• ë©”ì‰¬ì— ì €ì¥í•œë‹¤.
 			pHeightMapGridMesh = new CHeightMapGridMesh(pd3dDevice, xStart, zStart, nBlockWidth, nBlockLength, d3dxvScale, d3dxColor, m_pHeightMap);
 			SetMesh(pHeightMapGridMesh, x + (z*cxBlocks));
 		}
@@ -435,6 +381,5 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D11Device* pd3dDevice, LPCTSTR pFileName
 
 CHeightMapTerrain::~CHeightMapTerrain()
 {
-	if (m_pHeightMap)
-		delete m_pHeightMap;
+	if (m_pHeightMap) delete m_pHeightMap;
 }

@@ -69,7 +69,7 @@ public:CCamera(CCamera *pCamera);
 	   //카메라를 x-축, y-축, z-축으로 회전하는 가상함수이다.
 	   virtual void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f) { }
 	   //카메라의 이동, 회전에 따라 카메라의 정보를 갱신하는 가상함수이다.
-	   virtual void Update(D3DXVECTOR3& d3dxvLookAt, float fTimeElapsed) { }
+	   virtual void Update(D3DXVECTOR3& d3dxvLookAt, float fTimeElapsed){};
 	   /*3인칭 카메라에서 카메라가 바라보는 지점을 설정하는 가상함수이다. 일반적으로 플레이어를 바라보도록 설정한다.*/
 	   virtual void SetLookAt(D3DXVECTOR3& vLookAt) { }
 
@@ -90,6 +90,7 @@ protected:
 protected:
 	//카메라의 위치(월드좌표계) 벡터이다.
 	D3DXVECTOR3 m_d3dxvPosition;
+
 	// 카메라의 로컬 x - 축(Right), y - 축(Up), z - 축(Look)을 나타내는 벡터이다.* /
 	D3DXVECTOR3 m_d3dxvRight;
 	D3DXVECTOR3 m_d3dxvUp;
@@ -105,8 +106,10 @@ protected:
 
 	//카메라가 바라보는 점(월드좌표계)을 나타내는 벡터이다.
 	D3DXVECTOR3 m_d3dxvLookAtWorld;
+
 	//플레이어와 카메라의 오프셋을 나타내는 벡터이다. 주로 3인칭 카메라에서 사용된다.
 	D3DXVECTOR3 m_d3dxvOffset;
+
 	//플레이어가 회전할 때 얼마만큼의 시간을 지연시킨 후 카메라를 회전시킬 것인가를 나타낸다.
 	float m_fTimeLag;
 
@@ -153,6 +156,6 @@ public:
 	CThirdPersonCamera(CCamera *pCamera);
 	virtual ~CThirdPersonCamera() { }
 
-	virtual void Update(D3DXVECTOR3& d3dxvLookAt, float fTimeScale);
+	virtual void Update(D3DXVECTOR3& d3dxvLookAt, float fTimeElapsed);
 	virtual void SetLookAt(D3DXVECTOR3& vLookAt);
 };

@@ -6,7 +6,7 @@
 class CPlayer : public CGameObject
 { 
 public:
-	CPlayer(int nMeshes = 1);
+	CPlayer(int nMeshes=1);
 	virtual ~CPlayer();
 
 	// 플레이어의 현재 카메라를 설정하고 반환하는 멤버 함수를 선언한다.
@@ -59,7 +59,8 @@ public:
 	void SetMaxVelocityY(float fMaxVelocity) { m_fMaxVelocityY = fMaxVelocity; }
 	void SetVelocity(const D3DXVECTOR3& d3dxvVelocity) { m_d3dxvVelocity = d3dxvVelocity; }
 
-	/*플레이어의 위치를 d3dxvPosition 위치로 설정한다. d3dxvPosition 벡터에서 현재 플레이어의 위치 벡터를 빼면 현재 플레이어의 위치에서 d3dxvPosition 방향으로의 방향 벡터가 된다. 현재 플레이어의 위치에서 이 방향 벡터 만큼 이동한다.*/
+	/*플레이어의 위치를 d3dxvPosition 위치로 설정한다. d3dxvPosition 벡터에서 현재 플레이어의 위치 벡터를 빼면 현재 플레이어의 위치에서 d3dxvPosition 방향으로의 방향 벡터가 된다. 
+	현재 플레이어의 위치에서 이 방향 벡터 만큼 이동한다.*/
 	void SetPosition(const D3DXVECTOR3& d3dxvPosition) { Move((d3dxvPosition - m_d3dxvPosition), false); }
 
 	const D3DXVECTOR3& GetVelocity() const { return(m_d3dxvVelocity); }
@@ -96,16 +97,18 @@ public:
 };
 
 
+// AirplanePlayer
 class CAirplanePlayer : public CPlayer
 {
 public:
-	CAirplanePlayer(int nMeshes =1);
+	CAirplanePlayer(int nMeshes = 1);
 	virtual ~CAirplanePlayer();
 
 	virtual void ChangeCamera(ID3D11Device *pd3dDevice, DWORD nNewCameraMode, float fTimeElapsed);
 	virtual void OnPrepareRender();
 };
 
+// TerrainPlayer
 class CTerrainPlayer : public CPlayer
 {
 public:
@@ -116,5 +119,5 @@ public:
 
 	virtual void OnPlayerUpdated(float fTimeElapsed);
 	virtual void OnCameraUpdated(float fTimeElapsed);
-
 };
+ 

@@ -4,19 +4,21 @@
 #include "Camera.h"
 #include "Player.h"
 
-struct VS_CB_WORLD_MATRIX
-{
-	D3DXMATRIX m_d3dxmtxWorld;
-};
-
+// 인스턴싱 데이터를 나타내는 구조체 
 struct VS_VB_INSTANCE
 {
 	D3DXMATRIX m_d3dxTransform;
 	D3DXCOLOR m_d3dxColor;
 };
 
+struct VS_CB_WORLD_MATRIX
+{
+	D3DXMATRIX m_d3dxmtxWorld;
+};
+
 class CShader
 {
+
 public:
 	CShader();
 	virtual ~CShader();
@@ -25,6 +27,7 @@ public:
 	void CreatePixelShaderFromFile(ID3D11Device *pd3dDevice, WCHAR *pszFileName, LPCSTR pszShaderName, LPCSTR pszShaderModel, ID3D11PixelShader **ppd3dPixelShader);
 
 	virtual void CreateShader(ID3D11Device *pd3dDevice);
+	virtual CGameObject *PickObjectByRayIntersection(D3DXVECTOR3 *pd3dxvPickPosition, D3DXMATRIX *pd3dxmtxView, MESHINTERSECTINFO *pd3dxIntersectInfo);
 
 	static void CreateShaderVariables(ID3D11Device *pd3dDevice);
 	static void ReleaseShaderVariables();
@@ -36,8 +39,6 @@ public:
 	virtual void AnimateObjects(float fTimeElapsed);
 	virtual void OnPrepareRender(ID3D11DeviceContext *pd3dDeviceContext);
 	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext, CCamera *pCamera = NULL);
-
-	virtual CGameObject* PickObjectByRayIntersection(D3DXVECTOR3* pd3dxvPickPosition, D3DXMATRIX* pd3dxmtxView, MESHINTERSECTINFO* pd3dxIntersectInfo);
 
 protected:
 	ID3D11VertexShader *m_pd3dVertexShader;
@@ -77,17 +78,17 @@ public:
 
 	CPlayer *GetPlayer(int nIndex = 0) { return((CPlayer *)m_ppObjects[nIndex]); }
 };
+
 class CInstancingShader : public CShader
 {
 public:
 	CInstancingShader();
-	virtual ~CInstancingShader();
+	~CInstancingShader();
 
 	virtual void CreateShader(ID3D11Device *pd3dDevice);
 
-	virtual void BuildObjects(ID3D11Device *pd3dDevice);
+	virtual void BuildObjects(ID3D11Device *pd3dDevice, CHeightMapTerrain *pHeightMapTerrain);
 	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext, CCamera *pCamera);
-
 private:
 	UINT m_nInstanceBufferStride;
 	UINT m_nInstanceBufferOffset;
@@ -105,7 +106,7 @@ public:
 	CTerrainShader();
 	virtual ~CTerrainShader();
 
-	virtual void BuildObjects(ID3D11Device* pd3dDevice);
+	virtual void BuildObjects(ID3D11Device *pd3dDevice);
+
 	CHeightMapTerrain *GetTerrain();
 };
-
