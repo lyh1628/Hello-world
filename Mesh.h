@@ -20,6 +20,7 @@ public:
 	CVertex() { m_d3dxvPosition = D3DXVECTOR3(0, 0, 0); }
 	CVertex(D3DXVECTOR3 d3dxvPosition) { m_d3dxvPosition = d3dxvPosition; }
 	~CVertex() { }
+
 };
 
 class AABB
@@ -42,6 +43,13 @@ public:
 
 class CMesh
 {
+public:
+	/*각 정점의 위치 벡터를 픽킹을 위하여 저장한다(정점 버퍼를 DYNAMIC으로 생성하고 Map()을 하지 않아도 되도록).*/
+	D3DXVECTOR3 *m_pd3dxvPositions;
+	/*메쉬의 인덱스를 저장한다(인덱스 버퍼를 DYNAMIC으로 생성하고 Map()을 하지 않아도 되도록).*/
+	UINT *m_pnIndices;
+	int CheckRayIntersection(D3DXVECTOR3 *pd3dxvRayPosition, D3DXVECTOR3 *pd3dxvRayDirection, MESHINTERSECTINFO *pd3dxIntersectInfo);
+
 public:
 	CMesh(ID3D11Device *pd3dDevice);
 	virtual ~CMesh();
@@ -110,16 +118,6 @@ public:
 	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext);
 	//인스턴싱을 사용하여 렌더링한다. 
 	virtual void RenderInstanced(ID3D11DeviceContext *pd3dDeviceContext, int nInstances = 0, int nStartInstance = 0);
-
-
-public:
-	/* 각 정점의 위치 벡터를 픽킹을 위하여 저장한다.(정점 버퍼를 DYNAMIC으로 생성하고 Map()을 하지 않아도 되도록)*/
-	D3DXVECTOR3 *m_pd3dxvPositions;
-	/* 메쉬의 인덱스를 저장한다. (인덱스 버퍼를 DYNAMIC으로 생성하고 MAP()을 하지 않아도 되도록)*/
-	UINT *m_pnIndices;
-
-public:
-	int CheckRayIntersection(D3DXVECTOR3 *pd3dxvRayPosition, D3DXVECTOR3 *pd3dxvRayDirection, MESHINTERSECTINFO *pd3dxIntersectInfo);
 };
 
 class CTriangleMesh : public CMesh
@@ -130,6 +128,7 @@ public:
 
 	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext);
 	virtual void CreateRasterizerState(ID3D11Device *pd3dDevice);
+
 };
 
 class CDiffusedVertex
@@ -154,7 +153,6 @@ public:
 
 	virtual void CreateRasterizerState(ID3D11Device *pd3dDevice);
 	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext);
-
 };
 
 class CAirplaneMesh : public CMesh
@@ -173,36 +171,25 @@ public:
 	virtual void CreateRasterizerState(ID3D11Device *pd3dDevice);
 };
 
-
-/*  높이 맵을 사용하여 작은 지형을 표현할 수 있는 격자 메쉬를 정의한다.
-CHeightMapGridMesh 클래스는 높이 맵을 사용하는 하나의 격자 메쉬를 표현한다.
-이 격자는 좌표계의 xz-평면 위에 있다고 가정한다. 그리고 격자의 간격은 1이 되도록 만들 것이다.
-(실제 지형에서 격자의 간격은 스케일 벡터에 따라 달라질 것이다.) 그러면 격자의 각 교차점은 메쉬의 정점이 될 것이고,
-x-좌표와 z-좌표는 좌하단을 원점(xStart, 0, zStart)을 기준으로 오른쪽, 위쪽으로 값이 증가해 나간다.
-이제 이 격자의 각 교차점의 y-좌표(높이)는 교차점의 x-좌표가 a, z-좌표가 b일때 높이 맵(이미지)에서 (a, b)좌표의 픽셀 값을 사용한다.*/
-
 class CHeightMapGridMesh : public CMesh
 {
 protected:
-	// 격자의 크기(가로 x 방향, 세로 z-방향)이다.
+	//격자의 크기(가로: x-방향, 세로: z-방향)이다.
 	int m_nWidth;
 	int m_nLength;
-
-	/* 격자의 스케일(가로: x-방향, 세로 z-방향, 높이 y-방향) 벡터이다. 실제 격자 메쉬의 각 정점의 x-좌표, y-좌표, z-좌표는 스케일 벡터의
-	x-좌표, y-좌표, z-좌표로 곱한 값을 가진다. 즉, 실제 격자의 x-축 방향의 간격은 1이 아니라 스케일 벡터의 x좌표가 된다.
-	이렇게 하면 작은 격자를 사용하더라고 큰 격자를 생성할 수 있다.*/
+	/*격자의 스케일(가로: x-방향, 세로: z-방향, 높이: y-방향) 벡터이다. 실제 격자 메쉬의 각 정점의 x-좌표, y-좌표, z-좌표는 스케일 벡터의 x-좌표, y-좌표, z-좌표로 곱한 값을 갖는다. 즉, 실제 격자의 x-축 방향의 간격은 1이 아니라 스케일 벡터의 x-좌표가 된다. 이렇게 하면 작은 격자를 사용하더라도 큰 격자를 생성할 수 있다.*/
 	D3DXVECTOR3 m_d3dxvScale;
 
 public:
-	CHeightMapGridMesh(ID3D11Device *pd3dDevice, int xStart, int zStart, int nWidth, int nLength, D3DXVECTOR3 d3dxvScale = D3DXVECTOR3(1.0f, 1.0f, 1.0f), D3DXCOLOR d3dxColor = D3DXCOLOR(1.0f, 1.0f, 0.0f, 0.0f), void* pContext = NULL);
-	~CHeightMapGridMesh();
+	CHeightMapGridMesh(ID3D11Device *pd3dDevice, int xStart, int zStart, int nWidth, int nLength, D3DXVECTOR3 d3dxvScale = D3DXVECTOR3(1.0f, 1.0f, 1.0f), D3DXCOLOR d3dxColor = D3DXCOLOR(1.0f, 1.0f, 0.0f, 0.0f), void *pContext = NULL);
+	virtual ~CHeightMapGridMesh();
 
 	D3DXVECTOR3 GetScale() { return(m_d3dxvScale); }
 	int GetWidth() { return(m_nWidth); }
-	int GetLength() { return (m_nLength); }
+	int GetLength() { return(m_nLength); }
 
-	// 격자의 교점(정점)의 높이를 설정한다.
-	virtual float OnGetHeight(int x, int z, void* pContext);
+	//격자의 교점(정점)의 높이를 설정한다.
+	virtual float OnGetHeight(int x, int z, void *pContext);
 	//격자의 교점(정점)의 색상을 설정한다.
-	virtual D3DXCOLOR OnGetColor(int x, int z, void*pContext);
+	virtual D3DXCOLOR OnGetColor(int x, int z, void *pContext);
 };

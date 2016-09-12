@@ -150,8 +150,7 @@ bool CGameFramework::CreateDirect3DDisplay()
 
 void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	if (m_pScene)
-		m_pScene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+	if (m_pScene) m_pScene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
 
 	switch (nMessageID)
 	{
@@ -175,9 +174,7 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	if (m_pScene)
-		m_pScene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
-
+	if (m_pScene) m_pScene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 	switch (nMessageID)
 	{
 	case WM_KEYUP:
@@ -187,11 +184,13 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		case VK_F1:
 		case VK_F2:
 		case VK_F3:
-			if (m_pPlayer) m_pPlayer->ChangeCamera(m_pd3dDevice, (wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
-			m_pCamera = m_pPlayer->GetCamera();
-
-			// 씬에 현재 카메라를 설정한다.
-			m_pScene->SetCamera(m_pCamera);
+			if (m_pPlayer)
+			{
+				m_pPlayer->ChangeCamera(m_pd3dDevice, (wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
+				m_pCamera = m_pPlayer->GetCamera();
+				//씬에 현재 카메라를 설정한다.
+				m_pScene->SetCamera(m_pCamera);
+			}
 			break;
 		case VK_ESCAPE:
 			::PostQuitMessage(0);
@@ -259,10 +258,8 @@ void CGameFramework::OnDestroy()
 	if (m_pd3dDeviceContext) m_pd3dDeviceContext->Release();
 	if (m_pd3dDevice) m_pd3dDevice->Release();
 }
-
 void CGameFramework::BuildObjects()
 {
-	//CShader 클래스의 정적(static) 멤버 변수로 선언된 상수 버퍼를 생성한다.
 	CShader::CreateShaderVariables(m_pd3dDevice);
 
 	m_pScene = new CScene();
@@ -273,26 +270,20 @@ void CGameFramework::BuildObjects()
 	m_pPlayerShader->BuildObjects(m_pd3dDevice);
 	m_pPlayer = m_pPlayerShader->GetPlayer();
 
-	/* 지형의 xz-평면의 가운데에 플레이어가 위치하도록 한다. 플레이어의 y-좌표가 지형의 높이보다 크면 중력이 작용하도록 하여
-	플레이어를 설정하였으므로 플레이어는 점차적으로 하강하게 된다.*/
+	/*지형의 xz-평면의 가운데에 플레이어가 위치하도록 한다. 플레이어의 y-좌표가 지형의 높이 보다 크고 중력이 작용하도록 플레이어를 설정하였으므로 플레이어는 점차적으로 하강하게 된다.*/
 	CHeightMapTerrain *pTerrain = m_pScene->GetTerrain();
-	m_pPlayer->SetPosition(D3DXVECTOR3(pTerrain->GetLength() * 0.5f, pTerrain->GetPeakHeight()+1000.0f, pTerrain->GetLength()*0.5f));
-	
-	// 플레이어의 위치가 변경될 때 지형의 정보에 따라 플레이어의 위치를 변경할 수 있도록 설정한다.
+	m_pPlayer->SetPosition(D3DXVECTOR3(pTerrain->GetWidth()*0.5f, pTerrain->GetPeakHeight() + 1000.0f, pTerrain->GetLength()*0.5f));
+	//플레이어의 위치가 변경될 때 지형의 정보에 따라 플레이어의 위치를 변경할 수 있도록 설정한다.
 	m_pPlayer->SetPlayerUpdatedContext(pTerrain);
-
-	// 카메라의 위치가 변경될 때 지형의 정보에 따라 카메라의 위치를 변경할 수 있도록 설정한다.
+	//카메라의 위치가 변경될 때 지형의 정보에 따라 카메라의 위치를 변경할 수 있도록 설정한다.
 	m_pPlayer->SetCameraUpdatedContext(pTerrain);
 
 	m_pCamera = m_pPlayer->GetCamera();
-	
 	m_pCamera->SetViewport(m_pd3dDeviceContext, 0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
-
 	m_pCamera->GenerateViewMatrix();
 
 	m_pScene->SetCamera(m_pCamera);
 }
-
 // CScene클래스 객체의 ReleaseObjects() 멤버함수를 호출하고,
 // Cscene클래스 객체를 반환한다.
 void CGameFramework::ReleaseObjects()
@@ -379,15 +370,12 @@ void CGameFramework::FrameAdvance()
 
 	if (m_pPlayer) m_pPlayer->UpdateShaderVariables(m_pd3dDeviceContext);
 
-	//CCamera *pCamera = (m_pPlayer) ? m_pPlayer->GetCamera() : NULL;
-
 	if (m_pScene) m_pScene->Render(m_pd3dDeviceContext, m_pCamera);
+	if (m_pPlayerShader) m_pPlayerShader->Render(m_pd3dDeviceContext, m_pCamera); 
 
 	/*렌더 타겟은 그대로 두고 깊이 버퍼를 1.0으로 지운다. 이제 플레이어를 렌더링하면 플레이어는 무조건 그려질 것이다.*/
 	m_pd3dDeviceContext->ClearDepthStencilView(m_pd3dDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-	if (m_pPlayerShader) m_pPlayerShader->Render(m_pd3dDeviceContext, m_pCamera);
-
-
+	 
 	m_pDXGISwapChain->Present(0, 0);
 
 	m_GameTimer.GetFrameRate(m_pszBuffer + 12, 37);

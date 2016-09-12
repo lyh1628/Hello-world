@@ -33,7 +33,25 @@ void CShader::ReleaseObjects()
 		delete[] m_ppObjects;
 	}
 }
-
+CGameObject *CShader::PickObjectByRayIntersection(D3DXVECTOR3 *pd3dxvPickPosition, D3DXMATRIX *pd3dxmtxView, MESHINTERSECTINFO *pd3dxIntersectInfo)
+{
+	int nIntersected = 0;
+	float fNearHitDistance = FLT_MAX;
+	CGameObject *pSelectedObject = NULL;
+	MESHINTERSECTINFO d3dxIntersectInfo;
+	/*쉐이더 객체에 포함되는 모든 객체들에 대하여 픽킹 광선을 생성하고 객체의 바운딩 박스와의 교차를 검사한다. 교차하는 객체들 중에 카메라와 가장 가까운 객체의 정보와 객체를 반환한다.*/
+	for (int i = 0; i < m_nObjects; i++)
+	{
+		nIntersected = m_ppObjects[i]->PickObjectByRayIntersection(pd3dxvPickPosition, pd3dxmtxView, &d3dxIntersectInfo);
+		if ((nIntersected > 0) && (d3dxIntersectInfo.m_fDistance < fNearHitDistance))
+		{
+			fNearHitDistance = d3dxIntersectInfo.m_fDistance;
+			pSelectedObject = m_ppObjects[i];
+			if (pd3dxIntersectInfo) *pd3dxIntersectInfo = d3dxIntersectInfo;
+		}
+	}
+	return(pSelectedObject);
+}
 void CShader::AnimateObjects(float fTimeElapsed)
 {
 	for (int j = 0; j < m_nObjects; j++)
@@ -151,30 +169,6 @@ void CShader::UpdateShaderVariables(ID3D11DeviceContext *pd3dDeviceContext, D3DX
 	pd3dDeviceContext->VSSetConstantBuffers(VS_SLOT_WORLD_MATRIX, 1, &m_pd3dcbWorldMatrix);
 }
 
-CGameObject* CShader::PickObjectByRayIntersection(D3DXVECTOR3 *pd3dxvPickPosition, D3DXMATRIX *pd3dxmtxView, MESHINTERSECTINFO *pd3dxIntersectInfo)
-{
-	int nIntersected = 0;
-	float fNearHitDistance = FLT_MAX;
-	CGameObject* pSelectedObject = NULL;
-	MESHINTERSECTINFO d3dxIntersectInfo;
-
-	/* 쉐이더 객체에 포함되는 모든 객체들에 대하여 픽킹 광선을 생성하고 객체의 바운딩 박스와의 교차를 검사한다.
-	교차하는 객체들 중에 카메라와 가장 가까운 객체의 정보와 객체를 반환한다. */
-	for (int i = 0; i < m_nObjects; i++)
-	{
-		nIntersected = m_ppObjects[i]->PickObjectByRayIntersection(pd3dxvPickPosition, pd3dxmtxView, &d3dxIntersectInfo);
-		if ((nIntersected > 0) && (d3dxIntersectInfo.m_fDistance < fNearHitDistance))
-		{
-			fNearHitDistance = d3dxIntersectInfo.m_fDistance;
-			pSelectedObject = m_ppObjects[i];
-			if (pd3dxIntersectInfo)
-				*pd3dxIntersectInfo = d3dxIntersectInfo;
-		}
-	}
-	return (pSelectedObject);
-}
-
-#pragma region __CSceneShader__
 CSceneShader::CSceneShader()
 {
 }
@@ -186,11 +180,80 @@ void CSceneShader::CreateShader(ID3D11Device *pd3dDevice)
 {
 	CShader::CreateShader(pd3dDevice);
 }
+//
+//void CSceneShader::BuildObjects(ID3D11Device *pd3dDevice)
+//{
+//	CCubeMesh *pCubeMesh = new CCubeMesh(pd3dDevice, 12.0f, 12.0f, 12.0f, D3DCOLOR_XRGB(0, 0, 128));
+//
+//	int xObjects = 5, yObjects = 5, zObjects = 5, i = 0;
+//	m_nObjects = (xObjects * 2 + 1)*(yObjects * 2 + 1)*(zObjects * 2 + 1);
+//	m_ppObjects = new CGameObject*[m_nObjects];
+//
+//	float fxPitch = 12.0f * 2.5f;
+//	float fyPitch = 12.0f * 2.5f;
+//	float fzPitch = 12.0f * 2.5f;
+//	CRotatingObject *pRotatingObject = NULL;
+//	for (int x = -xObjects; x <= xObjects; x++)
+//	{
+//		for (int y = -yObjects; y <= yObjects; y++)
+//		{
+//			for (int z = -zObjects; z <= zObjects; z++)
+//			{
+//				pRotatingObject = new CRotatingObject();
+//				pRotatingObject->SetMesh(pCubeMesh);
+//				//pObject->SetShader(pShader);
+//				pRotatingObject->SetPosition(fxPitch*x, fyPitch*y, fzPitch*z);
+//				pRotatingObject->SetRotationAxis(D3DXVECTOR3(0.0f, 1.0f, 0.0f));
+//				pRotatingObject->SetRotationSpeed(10.0f*(i % 10));
+//				m_ppObjects[i++] = pRotatingObject;
+//			}
+//		}
+//	}
+//}
+
+CPlayerShader::CPlayerShader()
+{
+}
+
+CPlayerShader::~CPlayerShader()
+{
+}
+
+void CPlayerShader::CreateShader(ID3D11Device *pd3dDevice)
+{
+	CShader::CreateShader(pd3dDevice);
+
+}
+
+void CPlayerShader::BuildObjects(ID3D11Device *pd3dDevice)
+{
+	m_nObjects = 1;
+	m_ppObjects = new CGameObject*[m_nObjects];
+
+	CCubeMesh *pCubeMesh = new CCubeMesh(pd3dDevice, 4.0f, 12.0f, 4.0f, D3DXCOLOR(0.5f, 0.0f, 0.0f, 0.0f));
+	CTerrainPlayer *pTerrainPlayer = new CTerrainPlayer(1);
+	pTerrainPlayer->SetMesh(pCubeMesh);
+	pTerrainPlayer->CreateShaderVariables(pd3dDevice);
+	pTerrainPlayer->ChangeCamera(pd3dDevice, THIRD_PERSON_CAMERA, 0.0f);
+
+	m_ppObjects[0] = pTerrainPlayer;
+}
+
+void CPlayerShader::Render(ID3D11DeviceContext *pd3dDeviceContext, CCamera *pCamera)
+{
+	//3인칭 카메라일 때 플레이어를 렌더링한다.
+	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
+	if (nCameraMode == THIRD_PERSON_CAMERA)
+	{
+		CShader::Render(pd3dDeviceContext, pCamera);
+	}
+}
+
 void CSceneShader::BuildObjects(ID3D11Device *pd3dDevice)
 {
 	int xObjects = 6, yObjects = 6, zObjects = 6, i = 0;
-	/*정육면체 객체를 x-축, y-축, z-축으로 각각 13개씩 총 2,197개(13x13x13) 생성하고 구 객체를 16개 생성한다.*/
-	m_nObjects = (xObjects * 2 + 1)*(yObjects * 2 + 1)*(zObjects * 2 + 1) + (8 * 2);
+	/*정육면체 객체를 x-축, y-축, z-축으로 각각 13개씩 총 2,197개(13x13x13) 생성하고 구 객체를 16개 생성한다.*/   
+		m_nObjects = (xObjects * 2 + 1)*(yObjects * 2 + 1)*(zObjects * 2 + 1) + (8 * 2);
 	m_ppObjects = new CGameObject*[m_nObjects];
 
 	//정육면체 메쉬를 생성한다.
@@ -210,7 +273,7 @@ void CSceneShader::BuildObjects(ID3D11Device *pd3dDevice)
 				pRotatingObject->SetMesh(pCubeMesh);
 				pRotatingObject->SetPosition(fxPitch*x, fyPitch*y, fzPitch*z);
 				pRotatingObject->SetRotationAxis(D3DXVECTOR3(0.0f, 1.0f, 0.0f));
-				pRotatingObject->SetRotationSpeed(10.0f*(i % 10));
+				pRotatingObject->SetRotationSpeed(10.0f);
 				m_ppObjects[i++] = pRotatingObject;
 			}
 		}
@@ -241,49 +304,7 @@ void CSceneShader::BuildObjects(ID3D11Device *pd3dDevice)
 		m_ppObjects[i++] = pRevolvingObject;
 	}
 }
-#pragma endregion
 
-#pragma region __CPlayerShader__
-CPlayerShader::CPlayerShader()
-{
-}
-
-CPlayerShader::~CPlayerShader()
-{
-}
-
-void CPlayerShader::CreateShader(ID3D11Device *pd3dDevice)
-{
-	CShader::CreateShader(pd3dDevice);
-
-}
-
-void CPlayerShader::BuildObjects(ID3D11Device* pd3dDevice)
-{
-	m_nObjects = 1;
-	m_ppObjects = new CGameObject*[m_nObjects];
-
-	CCubeMesh *pCubeMesh = new CCubeMesh(pd3dDevice, 4.0f, 12.0f, 4.0f, D3DXCOLOR(0.5f, 0.0f, 0.0f, 0.0f));
-	CTerrainPlayer *pTerrainPlayer = new CTerrainPlayer(1);
-	pTerrainPlayer->SetMesh(pCubeMesh);
-	pTerrainPlayer->CreateShaderVariables(pd3dDevice);
-	pTerrainPlayer->ChangeCamera(pd3dDevice, THIRD_PERSON_CAMERA, 0.0f);
-
-	m_ppObjects[0] = pTerrainPlayer;
-}
-
-void CPlayerShader::Render(ID3D11DeviceContext *pd3dDeviceContext, CCamera *pCamera)
-{
-	//3인칭 카메라일 때 플레이어를 렌더링한다.
-	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
-	if (nCameraMode == THIRD_PERSON_CAMERA)
-	{
-		CShader::Render(pd3dDeviceContext, pCamera);
-	}
-}
-#pragma endregion
-
-#pragma region __CInstancingShader__
 CInstancingShader::CInstancingShader()
 {
 	m_pd3dCubeInstanceBuffer = NULL;
@@ -306,7 +327,7 @@ void CInstancingShader::CreateShader(ID3D11Device *pd3dDevice)
 		{ "INSTANCEPOS", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 2, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		{ "INSTANCEPOS", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 2, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		{ "INSTANCEPOS", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 2, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
-		{ "INSTANCECOLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 2,0, D3D11_INPUT_PER_INSTANCE_DATA, 1 }
+		{ "INSTANCECOLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 2, 0, D3D11_INPUT_PER_INSTANCE_DATA, 1 }
 	};
 	UINT nElements = ARRAYSIZE(d3dInputLayout);
 	CreateVertexShaderFromFile(pd3dDevice, L"Effect.fx", "VSInstancedDiffusedColor", "vs_5_0", &m_pd3dVertexShader, d3dInputLayout, nElements, &m_pd3dVertexLayout);
@@ -329,6 +350,7 @@ ID3D11Buffer *CInstancingShader::CreateInstanceBuffer(ID3D11Device *pd3dDevice, 
 	pd3dDevice->CreateBuffer(&d3dBufferDesc, (pBufferData) ? &d3dBufferData : NULL, &pd3dInstanceBuffer);
 	return(pd3dInstanceBuffer);
 }
+
 void CInstancingShader::BuildObjects(ID3D11Device *pd3dDevice)
 {
 	m_nInstanceBufferStride = sizeof(VS_VB_INSTANCE);
@@ -347,28 +369,28 @@ void CInstancingShader::BuildObjects(ID3D11Device *pd3dDevice)
 	float fyPitch = 12.0f * 2.5f;
 	float fzPitch = 12.0f * 2.5f;
 	CRotatingObject *pRotatingObject = NULL;
-	for (int x = -xObjects; x <= xObjects; x++)
-	{
-		for (int y = -yObjects; y <= yObjects; y++)
+		for (int x = -xObjects; x <= xObjects; x++)
 		{
-			for (int z = -zObjects; z <= zObjects; z++)
+			for (int y = -yObjects; y <= yObjects; y++)
 			{
-				pRotatingObject = new CRotatingObject();
-				pRotatingObject->SetMesh(pCubeMesh);
-				pRotatingObject->SetPosition(fxPitch*x, fyPitch*y, fzPitch*z);
-				pRotatingObject->SetRotationAxis(D3DXVECTOR3(0.0f, 1.0f, 0.0f));
-				pRotatingObject->SetRotationSpeed(10.0f*(i % 10)+10.0f);
-				m_ppObjects[i++] = pRotatingObject;
+				for (int z = -zObjects; z <= zObjects; z++)
+				{
+					pRotatingObject = new CRotatingObject();
+					pRotatingObject->SetMesh(pCubeMesh);
+					pRotatingObject->SetPosition(fxPitch*x, fyPitch*y, fzPitch*z);
+					pRotatingObject->SetRotationAxis(D3DXVECTOR3(0.0f, 1.0f, 0.0f));
+					pRotatingObject->SetRotationSpeed(10.0f*(i % 10));
+					m_ppObjects[i++] = pRotatingObject;
+				}
 			}
 		}
-	}
 	m_pd3dCubeInstanceBuffer = CreateInstanceBuffer(pd3dDevice, nCubeObjects, m_nInstanceBufferStride, NULL);
 	pCubeMesh->AssembleToVertexBuffer(1, &m_pd3dCubeInstanceBuffer, &m_nInstanceBufferStride, &m_nInstanceBufferOffset);
 
 	CSphereMesh *pSphereMesh = new CSphereMesh(pd3dDevice, 12.0f, 20, 20, D3DCOLOR_XRGB(64, 0, 0));
 
 	CRevolvingObject *pRevolvingObject = NULL;
-	float fRadius = (xObjects * fxPitch * 2.0f) * 1.5f;
+		float fRadius = (xObjects * fxPitch * 2.0f) * 1.5f;
 	for (int j = 0; j < 8; j++)
 	{
 		pRevolvingObject = new CRevolvingObject();
@@ -402,7 +424,6 @@ void CInstancingShader::Render(ID3D11DeviceContext *pd3dDeviceContext, CCamera *
 
 	int nCubeInstances = 0;
 	D3D11_MAPPED_SUBRESOURCE d3dMappedResource;
-
 	pd3dDeviceContext->Map(m_pd3dCubeInstanceBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &d3dMappedResource);
 	VS_VB_INSTANCE *pCubeInstances = (VS_VB_INSTANCE *)d3dMappedResource.pData;
 	for (int j = 0; j < nCubeObjects; j++)
@@ -442,40 +463,29 @@ void CInstancingShader::Render(ID3D11DeviceContext *pd3dDeviceContext, CCamera *
 	//카메라에 보이는 구들만 인스턴싱을 한다.
 	pSphereMesh->RenderInstanced(pd3dDeviceContext, nSphereInstances, 0);
 }
-#pragma endregion
-
-#pragma region __CTerrainShader__
 
 CTerrainShader::CTerrainShader()
 {
-
 }
+
 CTerrainShader::~CTerrainShader()
 {
-
 }
 
-void CTerrainShader::BuildObjects(ID3D11Device* pd3dDevice)
+void CTerrainShader::BuildObjects(ID3D11Device *pd3dDevice)
 {
 	m_nObjects = 1;
 	m_ppObjects = new CGameObject*[m_nObjects];
 
-	// 지형을 확대할 스케일 벡터이다. x-축과 z-축은 8배, y-축은 2배 확대한다.
+	//지형을 확대할 스케일 벡터이다. x-축과 z-축은 8배, y-축은 2배 확대한다.
 	D3DXVECTOR3 d3dxvScale(8.0f, 2.0f, 8.0f);
 	D3DXCOLOR d3dxColor(0.0f, 0.2f, 0.0f, 0.0f);
-
-	/* 지형을 높이맵 이미지 파일을 사용하여 생성한다, 높이 맵 이미지의 크기는 가로x세로(257x257)이고, 격자 메쉬의 크기는
-	가로x세로(17x17)이다. 지형 전체는 가로 방향으로 16개, 세로 방향으로 16개의 격자 메쉬를 가진다. 
-	지형을 구성하는 격자 메쉬의 개수는 총 256(16x 16)개가 된다.*/
-//	m_ppObjects[0] = new CHeightMapTerrain(pd3dDevice, _T("../Assets/Image/Terrain/HeightMap.raw"), 257, 257, 17, 17, d3dxvScale, d3dxColor);
-	m_ppObjects[0] = new CHeightMapTerrain(pd3dDevice, _T("HeightMap.raw"), 257, 257, 17, 17, d3dxvScale, d3dxColor);
-
-	// 격자 메쉬의 크기를 가로x세로(257, 257)로 설정하고 실행하여 프레임 레이트를 비교해 보자.
+	/*지형을 높이 맵 이미지 파일을 사용하여 생성한다. 높이 맵 이미지의 크기는 가로x세로(257x257)이고 격자 메쉬의 크기는 가로x세로(17x17)이다. 
+	지형 전체는 가로 방향으로 16개, 세로 방향으로 16의 격자 메쉬를 가진다. 지형을 구성하는 격자 메쉬의 개수는 총 256(16x16)개가 된다. */
+	m_ppObjects[0] = new CHeightMapTerrain(pd3dDevice, _T("HeightMap.raw"), 257, 257, 257, 257, d3dxvScale, d3dxColor);
+	//격자 메쉬의 크기를 가로x세로(257x257)로 설정하여 실행하고 프레임 레이트를 비교하라.
 }
-
 CHeightMapTerrain *CTerrainShader::GetTerrain()
 {
-	return ((CHeightMapTerrain*)m_ppObjects[0]);
+	return((CHeightMapTerrain *)m_ppObjects[0]);
 }
-
-#pragma endregion

@@ -66,6 +66,7 @@ void CCamera::GenerateViewMatrix()
 	D3DXMatrixLookAtLH(&m_d3dxmtxView, &m_d3dxvPosition, &m_pPlayer->GetPosition(), &m_d3dxvUp);
 }
 
+
 // 카메라의 z-축을 기준으로 카메라의 좌표축들이 직교하도록 카메라 변환행렬을 갱신한다.
 void CCamera::RegenerateViewMatrix()
 {
@@ -247,7 +248,6 @@ CThirdPersonCamera::CThirdPersonCamera(CCamera *pCamera) : CCamera(pCamera)
 		}
 	}
 }
-
 void CThirdPersonCamera::Update(D3DXVECTOR3& d3dxvLookAt, float fTimeElapsed)
 {
 	//플레이어의 회전에 따라 3인칭 카메라도 회전해야 한다.
@@ -276,7 +276,6 @@ void CThirdPersonCamera::Update(D3DXVECTOR3& d3dxvLookAt, float fTimeElapsed)
 		float fDistance = fLength * fTimeLagScale;
 		if (fDistance > fLength) fDistance = fLength;
 		if (fLength < 0.01f) fDistance = fLength;
-	
 		if (fDistance > 0)
 		{
 			m_d3dxvPosition += d3dxvDirection * fDistance;

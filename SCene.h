@@ -4,7 +4,8 @@
 
 class CScene
 {
-
+public:
+	CHeightMapTerrain *GetTerrain();
 public:
 	CScene();
 	~CScene();
@@ -22,14 +23,12 @@ private:
 	//씬은 쉐이더들의 리스트(배열)이다.
 	CShader *m_pShaders;
 	int m_nShaders;
-
-	CCamera* m_pCamera;
-	CGameObject* m_pSelectedObject;
-
 public:
-	CGameObject* PickObjectPointedByCursor(int xClient, int yClinet);
-	void SetCamera(CCamera* pCamera) { m_pCamera = pCamera; }
+	CGameObject *PickObjectPointedByCursor(int xClient, int yClient);
+	void SetCamera(CCamera *pCamera) { m_pCamera = pCamera; }
 
-	CHeightMapTerrain *GetTerrain();
+private:
+	CCamera *m_pCamera;
+	CGameObject *m_pSelectedObject;
 };
 
